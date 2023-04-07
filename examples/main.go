@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+type TestDto struct {
+	Message string
+	Result  int
+}
+
 var brokerAddr = "localhost:61616"
 var destination = "myDest"
 
@@ -45,7 +50,7 @@ func main() {
 func sendInfiniteMessages() error {
 	var sender artemis.Sender = &artemis.Producer{Addr: brokerAddr, Queue: destination}
 	for {
-		err := sender.SendMessage("Hello Artemis")
+		err := sender.SendMessage(TestDto{Message: "the answer is", Result: 42})
 		if err != nil {
 			return err
 		}
@@ -53,10 +58,18 @@ func sendInfiniteMessages() error {
 	}
 }
 
-func handler1(msg string) {
-	fmt.Println("Receiver 1: " + msg)
+func handler1(message interface{}) {
+	if msg, ok := message.(TestDto); ok {
+		fmt.Println("Receiver 1: ", msg.Message, msg.Result)
+	} else {
+		fmt.Println("Receiver 1: cannot assert type of message")
+	}
 }
 
-func handler2(msg string) {
-	fmt.Println("Receiver 2: " + msg)
+func handler2(message interface{}) {
+	if msg, ok := message.(TestDto); ok {
+		fmt.Println("Receiver 2: ", msg.Message, msg.Result)
+	} else {
+		fmt.Println("Receiver 2: cannot assert type of message")
+	}
 }

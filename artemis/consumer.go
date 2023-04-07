@@ -10,7 +10,7 @@ type Consumer struct {
 	Queue string
 }
 
-func (c *Consumer) ReceiveMessages(queue string, number uint64, handler func(msg string)) error {
+func (c *Consumer) ReceiveMessages(queue string, number uint64, handler func(msg any)) error {
 	conn, err := stomp.Dial("tcp", c.Addr)
 	if err != nil {
 		return fmt.Errorf("cannot connect to server %s: %v", c.Addr, err)
@@ -26,16 +26,20 @@ func (c *Consumer) ReceiveMessages(queue string, number uint64, handler func(msg
 		if msg.Err != nil {
 			return msg.Err
 		}
-		handler(string(msg.Body))
+		m, err := decode(msg.Body)
+		if err != nil {
+			return fmt.Errorf("failed to decode message: %v %v", msg, err)
+		}
+		handler(m)
 	}
 	return conn.Disconnect()
 }
 
-func (c *Consumer) ReceiveFrom(queue string, handler func(msg string)) error {
+func (c *Consumer) ReceiveFrom(queue string, handler func(msg any)) error {
 	return c.ReceiveMessages(queue, infinite, handler)
 }
 
-func (c *Consumer) Receive(handler func(msg string)) error {
+func (c *Consumer) Receive(handler func(msg any)) error {
 	if c.Queue == "" {
 		return fmt.Errorf("no default queue specified")
 	}

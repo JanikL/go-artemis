@@ -10,7 +10,7 @@ type Subscriber struct {
 	Topic string
 }
 
-func (s *Subscriber) ReceiveMessages(topic string, number uint64, handler func(msg string)) error {
+func (s *Subscriber) ReceiveMessages(topic string, number uint64, handler func(msg any)) error {
 	conn, err := stomp.Dial("tcp", s.Addr)
 	if err != nil {
 		return fmt.Errorf("cannot connect to server %s: %v", s.Addr, err)
@@ -26,16 +26,20 @@ func (s *Subscriber) ReceiveMessages(topic string, number uint64, handler func(m
 		if msg.Err != nil {
 			return msg.Err
 		}
-		handler(string(msg.Body))
+		m, err := decode(msg.Body)
+		if err != nil {
+			return fmt.Errorf("failed to decode message: %v %v", msg, err)
+		}
+		handler(m)
 	}
 	return conn.Disconnect()
 }
 
-func (s *Subscriber) ReceiveFrom(topic string, handler func(msg string)) error {
+func (s *Subscriber) ReceiveFrom(topic string, handler func(msg any)) error {
 	return s.ReceiveMessages(topic, infinite, handler)
 }
 
-func (s *Subscriber) Receive(handler func(msg string)) error {
+func (s *Subscriber) Receive(handler func(msg any)) error {
 	if s.Topic == "" {
 		return fmt.Errorf("no default topic specified")
 	}
