@@ -1,0 +1,16 @@
+services:
+  artemis-broker:
+    image: quay.io/artemiscloud/activemq-artemis-broker:latest
+    environment:
+      - AMQ_USER=admin
+      - AMQ_PASSWORD=secret
+    ports:
+      - "61616:61616"
+
+  artemis-test:
+    build: ./
+    environment:
+      - ARTEMIS_BROKER_ADDR=artemis-broker:61616
+    restart: on-failure
+    depends_on:
+      - artemis-broker
