@@ -1,15 +1,17 @@
 FROM golang:1.19-alpine
-
 WORKDIR /app
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
-COPY . .
-RUN go build -o app examples/main.go
+COPY *.go ./
+COPY artemis ./artemis
+COPY examples ./examples
+RUN go build -o artemis_example examples/main.go
 
 FROM alpine:latest
-COPY --from=0 app .
+WORKDIR /app
+COPY --from=0 /app/artemis_example ./
 
-CMD ["./app"]
+CMD ["./artemis_example"]
