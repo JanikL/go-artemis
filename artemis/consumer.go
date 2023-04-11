@@ -15,6 +15,7 @@ func (c *Consumer) ReceiveMessages(queue string, number uint64, handler func(msg
 	if err != nil {
 		return fmt.Errorf("cannot connect to server %s: %v", c.Addr, err)
 	}
+	defer conn.Disconnect()
 	sub, err := conn.Subscribe(queue, stomp.AckAuto,
 		stomp.SubscribeOpt.Header("subscription-type", "ANYCAST"))
 	if err != nil {
@@ -24,15 +25,15 @@ func (c *Consumer) ReceiveMessages(queue string, number uint64, handler func(msg
 	for ; number == infinite || i < number; i++ {
 		msg := <-sub.C
 		if msg.Err != nil {
-			return msg.Err
+			return fmt.Errorf("failed to receive a message: %v", msg.Err)
 		}
 		m, err := decode(msg.Body)
 		if err != nil {
-			return fmt.Errorf("failed to decode message: %v %v", msg, err)
+			return fmt.Errorf("failed to decode message: %v %v", msg.Header, err)
 		}
 		handler(m)
 	}
-	return conn.Disconnect()
+	return nil
 }
 
 func (c *Consumer) ReceiveFrom(queue string, handler func(msg any)) error {

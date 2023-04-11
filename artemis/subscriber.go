@@ -15,6 +15,7 @@ func (s *Subscriber) ReceiveMessages(topic string, number uint64, handler func(m
 	if err != nil {
 		return fmt.Errorf("cannot connect to server %s: %v", s.Addr, err)
 	}
+	defer conn.Disconnect()
 	sub, err := conn.Subscribe(topic, stomp.AckAuto,
 		stomp.SubscribeOpt.Header("subscription-type", "MULTICAST"))
 	if err != nil {
@@ -24,15 +25,15 @@ func (s *Subscriber) ReceiveMessages(topic string, number uint64, handler func(m
 	for ; number == infinite || i < number; i++ {
 		msg := <-sub.C
 		if msg.Err != nil {
-			return msg.Err
+			return fmt.Errorf("failed to receive a message: %v", msg.Err)
 		}
 		m, err := decode(msg.Body)
 		if err != nil {
-			return fmt.Errorf("failed to decode message: %v %v", msg, err)
+			return fmt.Errorf("failed to decode message: %v %v", msg.Header, err)
 		}
 		handler(m)
 	}
-	return conn.Disconnect()
+	return nil
 }
 
 func (s *Subscriber) ReceiveFrom(topic string, handler func(msg any)) error {

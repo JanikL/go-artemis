@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/JanikL/go-artemis/artemis"
+	"log"
 	"os"
 	"time"
 )
@@ -20,37 +21,35 @@ func main() {
 		brokerAddr = val
 	}
 
-	println("start")
-
+	log.Println("start receiver 1")
 	go func() {
 		var receiver1 artemis.Receiver = &artemis.Consumer{Addr: brokerAddr, Queue: destination}
 		err := receiver1.Receive(handler1)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	}()
 
+	log.Println("start receiver 2")
 	go func() {
 		var receiver2 artemis.Receiver = &artemis.Consumer{Addr: brokerAddr, Queue: destination}
 		err := receiver2.Receive(handler2)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 	}()
 
+	log.Println("start sending messages")
 	err := sendInfiniteMessages()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
 func sendInfiniteMessages() error {
 	var sender artemis.Sender = &artemis.Producer{Addr: brokerAddr, Queue: destination}
 	for {
-		err := sender.SendMessage(TestDto{Message: "the answer is", Result: 42})
+		err := sender.Send(TestDto{Message: "the answer is", Result: 42})
 		if err != nil {
 			return err
 		}
