@@ -26,7 +26,7 @@ type Receiver[T any] struct {
 	Enc encoding
 }
 
-func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler func(msg T)) error {
+func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler func(msg *T)) error {
 	conn, err := stomp.Dial("tcp", r.Addr)
 	if err != nil {
 		return fmt.Errorf("cannot connect to server %s: %v", r.Addr, err)
@@ -52,11 +52,11 @@ func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler
 	return nil
 }
 
-func (r *Receiver[T]) ReceiveFrom(destination string, handler func(msg T)) error {
+func (r *Receiver[T]) ReceiveFrom(destination string, handler func(msg *T)) error {
 	return r.ReceiveMessages(destination, infinite, handler)
 }
 
-func (r *Receiver[T]) Receive(handler func(msg T)) error {
+func (r *Receiver[T]) Receive(handler func(msg *T)) error {
 	if r.Dest == "" {
 		return fmt.Errorf("no default destination specified")
 	}
@@ -71,7 +71,7 @@ func (r *Receiver[T]) subType() string {
 	}
 }
 
-func decode[T any](message []byte, enc encoding) (T, error) {
+func decode[T any](message []byte, enc encoding) (*T, error) {
 	switch enc {
 	case EncodingGob:
 		return decodeGob[T](message)
@@ -82,24 +82,24 @@ func decode[T any](message []byte, enc encoding) (T, error) {
 	}
 }
 
-func decodeGob[T any](message []byte) (T, error) {
+func decodeGob[T any](message []byte) (*T, error) {
 	gob.Register(*new(T))
 	buff := bytes.NewBuffer(message)
 	dec := gob.NewDecoder(buff)
 	var msg any
 	err := dec.Decode(&msg)
 	if err != nil {
-		return *new(T), fmt.Errorf("decode error: %v", err)
+		return nil, fmt.Errorf("decode error: %v", err)
 	}
 	m := msg.(T)
-	return m, nil
+	return &m, nil
 }
 
-func decodeJson[T any](message []byte) (T, error) {
+func decodeJson[T any](message []byte) (*T, error) {
 	var msg T
 	err := json.Unmarshal(message, &msg)
 	if err != nil {
-		return msg, fmt.Errorf("decode error: %v", err)
+		return nil, fmt.Errorf("decode error: %v", err)
 	}
-	return msg, nil
+	return &msg, nil
 }

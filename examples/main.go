@@ -65,10 +65,10 @@ func sendInfiniteMessages() error {
 	}
 }
 
-func handler1(msg TestDto) {
+func handler1(msg *TestDto) {
 	fmt.Println("receiver 1:", msg.Message, msg.Result)
 }
 
-func handler2(msg TestDto) {
+func handler2(msg *TestDto) {
 	fmt.Println("receiver 2:", msg.Message, msg.Result)
 }
