@@ -3,8 +3,16 @@ package artemis
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"github.com/go-stomp/stomp/v3"
+)
+
+type encoding int
+
+const (
+	EncodingGob encoding = iota
+	EncodingJson
 )
 
 // Sender sends values as gobs to a specified destination.
@@ -13,8 +21,13 @@ type Sender struct {
 	Dest string
 
 	// PubSub configures the type of destination.
-	// "true" for the publish-subscribe pattern (topics), "false" for the producer-consumer pattern (queues).
+	// "true" for the publish-subscribe pattern (topics),
+	// "false" for the producer-consumer pattern (queues).
 	PubSub bool
+
+	// Enc specifies the encoding.
+	// The default encoding is gob.
+	Enc encoding
 }
 
 func (s *Sender) SendTo(destination string, messages ...any) error {
@@ -25,11 +38,12 @@ func (s *Sender) SendTo(destination string, messages ...any) error {
 	defer conn.Disconnect()
 	destType := s.destType()
 	for _, msg := range messages {
-		m, err := encode(msg)
+		m, err := encode(msg, s.Enc)
 		if err != nil {
 			return fmt.Errorf("failed to encode message: %v: %v", msg, err)
 		}
-		err = conn.Send(destination, "text/plain", m, stomp.SendOpt.Header("destination-type", destType))
+		err = conn.Send(destination, "text/plain", m,
+			stomp.SendOpt.Header("destination-type", destType))
 		if err != nil {
 			return fmt.Errorf("failed to send to %s: %v", destination, err)
 		}
@@ -52,13 +66,32 @@ func (s *Sender) destType() string {
 	}
 }
 
-func encode(message any) ([]byte, error) {
-	buff := bytes.Buffer{}
+func encode(message any, enc encoding) ([]byte, error) {
+	switch enc {
+	case EncodingGob:
+		return encodeGob(message)
+	case EncodingJson:
+		return encodeJson(message)
+	default:
+		panic(fmt.Sprint("unknown encoding", enc))
+	}
+}
+
+func encodeGob(message any) ([]byte, error) {
 	gob.Register(message)
+	buff := bytes.Buffer{}
 	enc := gob.NewEncoder(&buff)
 	err := enc.Encode(&message) // Pass pointer to interface so Encode sees a value of interface type.
 	if err != nil {
 		return nil, fmt.Errorf("encode error: %v", err)
 	}
 	return buff.Bytes(), nil
+}
+
+func encodeJson(message any) ([]byte, error) {
+	b, err := json.Marshal(message)
+	if err != nil {
+		return nil, fmt.Errorf("encode error: %v", err)
+	}
+	return b, nil
 }

@@ -9,8 +9,8 @@ import (
 )
 
 type TestDto struct {
-	Message string
-	Result  int
+	Message string `json:"message"`
+	Result  int    `json:"result"`
 }
 
 var brokerAddr = "localhost:61616"
@@ -23,7 +23,11 @@ func main() {
 
 	log.Println("start receiver 1")
 	go func() {
-		receiver1 := artemis.Receiver{Addr: brokerAddr, Dest: destination, PubSub: false}
+		receiver1 := artemis.Receiver[TestDto]{
+			Addr: brokerAddr,
+			Dest: destination,
+			Enc:  artemis.EncodingJson,
+		}
 		err := receiver1.Receive(handler1)
 		if err != nil {
 			log.Fatal(err)
@@ -32,7 +36,11 @@ func main() {
 
 	log.Println("start receiver 2")
 	go func() {
-		receiver2 := artemis.Receiver{Addr: brokerAddr, Dest: destination, PubSub: false}
+		receiver2 := artemis.Receiver[TestDto]{
+			Addr: brokerAddr,
+			Dest: destination,
+			Enc:  artemis.EncodingJson,
+		}
 		err := receiver2.Receive(handler2)
 		if err != nil {
 			log.Fatal(err)
@@ -47,7 +55,7 @@ func main() {
 }
 
 func sendInfiniteMessages() error {
-	sender := artemis.Sender{Addr: brokerAddr, Dest: destination, PubSub: false}
+	sender := artemis.Sender{Addr: brokerAddr, Dest: destination, Enc: artemis.EncodingJson}
 	for {
 		err := sender.Send(TestDto{Message: "the answer is", Result: 42})
 		if err != nil {
@@ -57,18 +65,10 @@ func sendInfiniteMessages() error {
 	}
 }
 
-func handler1(message any) {
-	if msg, ok := message.(TestDto); ok {
-		fmt.Println("receiver 1: ", msg.Message, msg.Result)
-	} else {
-		log.Fatal("receiver 1: cannot assert type of message")
-	}
+func handler1(msg TestDto) {
+	fmt.Println("receiver 1:", msg.Message, msg.Result)
 }
 
-func handler2(message any) {
-	if msg, ok := message.(TestDto); ok {
-		fmt.Println("receiver 2: ", msg.Message, msg.Result)
-	} else {
-		log.Fatal("receiver 2: cannot assert type of message")
-	}
+func handler2(msg TestDto) {
+	fmt.Println("receiver 2:", msg.Message, msg.Result)
 }
