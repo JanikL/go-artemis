@@ -15,14 +15,14 @@ const (
 	EncodingJson
 )
 
-// Sender sends values as gobs to a specified destination.
+// Sender sends messages to a specified destination.
 type Sender struct {
 	Addr string
 	Dest string
 
 	// PubSub configures the type of destination.
-	// "true" for the publish-subscribe pattern (topics),
-	// "false" for the producer-consumer pattern (queues).
+	// 'true' for the publish-subscribe pattern (topics),
+	// 'false' for the producer-consumer pattern (queues).
 	PubSub bool
 
 	// Enc specifies the encoding.
@@ -33,7 +33,7 @@ type Sender struct {
 func (s *Sender) SendTo(destination string, messages ...any) error {
 	conn, err := stomp.Dial("tcp", s.Addr)
 	if err != nil {
-		return fmt.Errorf("cannot connect to server %s: %v", s.Addr, err)
+		return fmt.Errorf("could not connect to broker %s: %v", s.Addr, err)
 	}
 	defer conn.Disconnect()
 	destType := s.destType()
@@ -45,7 +45,7 @@ func (s *Sender) SendTo(destination string, messages ...any) error {
 		err = conn.Send(destination, "text/plain", m,
 			stomp.SendOpt.Header("destination-type", destType))
 		if err != nil {
-			return fmt.Errorf("failed to send to %s: %v", destination, err)
+			return fmt.Errorf("could not send to queue %s: %v", destination, err)
 		}
 	}
 	return nil
@@ -73,7 +73,7 @@ func encode(message any, enc encoding) ([]byte, error) {
 	case EncodingJson:
 		return encodeJson(message)
 	default:
-		panic(fmt.Sprint("unknown encoding", enc))
+		return nil, fmt.Errorf("unknown encoding: %v", enc)
 	}
 }
 
@@ -83,7 +83,7 @@ func encodeGob(message any) ([]byte, error) {
 	enc := gob.NewEncoder(&buff)
 	err := enc.Encode(&message) // Pass pointer to interface so Encode sees a value of interface type.
 	if err != nil {
-		return nil, fmt.Errorf("encode error: %v", err)
+		return nil, fmt.Errorf("could not encode as gob: %v", err)
 	}
 	return buff.Bytes(), nil
 }
@@ -91,7 +91,7 @@ func encodeGob(message any) ([]byte, error) {
 func encodeJson(message any) ([]byte, error) {
 	b, err := json.Marshal(message)
 	if err != nil {
-		return nil, fmt.Errorf("encode error: %v", err)
+		return nil, fmt.Errorf("could not marshal as json: %v", err)
 	}
 	return b, nil
 }

@@ -11,14 +11,14 @@ import (
 
 const infinite = math.MaxUint64
 
-// Receiver receives values as gobs from a specified destination.
+// Receiver receives messages of type T from a specified destination.
 type Receiver[T any] struct {
 	Addr string
 	Dest string
 
 	// PubSub configures the type of destination.
-	// "true" for the publish-subscribe pattern (topics),
-	// "false" for the producer-consumer pattern (queues).
+	// 'true' for the publish-subscribe pattern (topics),
+	// 'false' for the producer-consumer pattern (queues).
 	PubSub bool
 
 	// Enc specifies the encoding.
@@ -29,23 +29,23 @@ type Receiver[T any] struct {
 func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler func(msg *T)) error {
 	conn, err := stomp.Dial("tcp", r.Addr)
 	if err != nil {
-		return fmt.Errorf("cannot connect to server %s: %v", r.Addr, err)
+		return fmt.Errorf("could not connect to broker %s: %v", r.Addr, err)
 	}
 	defer conn.Disconnect()
 	sub, err := conn.Subscribe(destination, stomp.AckAuto,
 		stomp.SubscribeOpt.Header("subscription-type", r.subType()))
 	if err != nil {
-		return fmt.Errorf("cannot receive from %s: %v", destination, err)
+		return fmt.Errorf("could not subscribe to queue %s: %v", destination, err)
 	}
 	var i uint64 = 0
 	for ; number == infinite || i < number; i++ {
 		msg := <-sub.C
 		if msg.Err != nil {
-			return fmt.Errorf("failed to receive a message: %v", msg.Err)
+			return fmt.Errorf("received an error: %v", msg.Err)
 		}
 		m, err := decode[T](msg.Body, r.Enc)
 		if err != nil {
-			return fmt.Errorf("failed to decode message: %v %v", msg.Header, err)
+			return fmt.Errorf("failed to decode message: %v: %v", msg.Header, err)
 		}
 		handler(m)
 	}
@@ -78,7 +78,7 @@ func decode[T any](message []byte, enc encoding) (*T, error) {
 	case EncodingJson:
 		return decodeJson[T](message)
 	default:
-		panic(fmt.Sprint("unknown encoding", enc))
+		return nil, fmt.Errorf("unknown encoding: %v", enc)
 	}
 }
 
@@ -89,7 +89,7 @@ func decodeGob[T any](message []byte) (*T, error) {
 	var msg any
 	err := dec.Decode(&msg)
 	if err != nil {
-		return nil, fmt.Errorf("decode error: %v", err)
+		return nil, fmt.Errorf("could not decode gob: %v", err)
 	}
 	m := msg.(T)
 	return &m, nil
@@ -99,7 +99,7 @@ func decodeJson[T any](message []byte) (*T, error) {
 	var msg T
 	err := json.Unmarshal(message, &msg)
 	if err != nil {
-		return nil, fmt.Errorf("decode error: %v", err)
+		return nil, fmt.Errorf("could not unmarshal json: %v", err)
 	}
 	return &msg, nil
 }
