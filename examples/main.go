@@ -3,72 +3,39 @@ package main
 import (
 	"fmt"
 	"github.com/JanikL/go-artemis/artemis"
-	"log"
-	"os"
 	"time"
 )
 
-type TestDto struct {
-	Message string `json:"message"`
-	Result  int    `json:"result"`
-}
-
-var brokerAddr = "localhost:61616"
-var destination = "myDest"
+const (
+	brokerAddr  = "localhost:61616"
+	destination = "myDest"
+)
 
 func main() {
-	if val, isPresent := os.LookupEnv("ARTEMIS_BROKER_ADDR"); isPresent {
-		brokerAddr = val
+
+	// create a receiver that receives messages of type string
+	receiver := artemis.Receiver[string]{Addr: brokerAddr, Dest: destination}
+
+	// create a message handler
+	handler := func(msg *string) {
+		fmt.Println(*msg)
 	}
 
-	log.Println("start receiver 1")
+	// start receiving messages in a separate goroutine
 	go func() {
-		receiver1 := artemis.Receiver[TestDto]{
-			Addr: brokerAddr,
-			Dest: destination,
-			Enc:  artemis.EncodingJson,
-		}
-		err := receiver1.Receive(handler1)
+		err := receiver.Receive(handler)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 	}()
 
-	log.Println("start receiver 2")
-	go func() {
-		receiver2 := artemis.Receiver[TestDto]{
-			Addr: brokerAddr,
-			Dest: destination,
-			Enc:  artemis.EncodingJson,
-		}
-		err := receiver2.Receive(handler2)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	log.Println("start sending messages")
-	err := sendInfiniteMessages()
+	// create a sender and send two messages
+	sender := artemis.Sender{Addr: brokerAddr, Dest: destination}
+	err := sender.Send("Hello", "Artemis")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
-}
 
-func sendInfiniteMessages() error {
-	sender := artemis.Sender{Addr: brokerAddr, Dest: destination, Enc: artemis.EncodingJson}
-	for {
-		err := sender.Send(TestDto{Message: "the answer is", Result: 42})
-		if err != nil {
-			return err
-		}
-		time.Sleep(5 * time.Second)
-	}
-}
-
-func handler1(msg *TestDto) {
-	fmt.Println("receiver 1:", msg.Message, msg.Result)
-}
-
-func handler2(msg *TestDto) {
-	fmt.Println("receiver 2:", msg.Message, msg.Result)
+	// wait until the messages have been received
+	time.Sleep(1 * time.Second)
 }
