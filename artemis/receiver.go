@@ -6,14 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-stomp/stomp/v3"
-	"math"
 )
 
-const infinite = math.MaxUint64
+const unlimited = 0
 
-// Receiver receives messages of type T from a specified destination.
+// A Receiver receives messages of type T from the artemis broker.
 type Receiver[T any] struct {
+
+	// Addr is the address of the broker.
 	Addr string
+
+	// Dest is the default destination.
 	Dest string
 
 	// PubSub configures the type of destination.
@@ -26,6 +29,8 @@ type Receiver[T any] struct {
 	Enc encoding
 }
 
+// ReceiveMessages receives a specified number of messages from a specified destination.
+// If number is set to 0, it will receive an unlimited number of messages.
 func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler func(msg *T)) error {
 	conn, err := stomp.Dial("tcp", r.Addr)
 	if err != nil {
@@ -38,7 +43,7 @@ func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler
 		return fmt.Errorf("could not subscribe to queue %s: %v", destination, err)
 	}
 	var i uint64 = 0
-	for ; number == infinite || i < number; i++ {
+	for ; number == unlimited || i < number; i++ {
 		msg := <-sub.C
 		if msg.Err != nil {
 			return fmt.Errorf("received an error: %v", msg.Err)
@@ -52,10 +57,12 @@ func (r *Receiver[T]) ReceiveMessages(destination string, number uint64, handler
 	return nil
 }
 
+// ReceiveFrom receives messages from a specified destination.
 func (r *Receiver[T]) ReceiveFrom(destination string, handler func(msg *T)) error {
-	return r.ReceiveMessages(destination, infinite, handler)
+	return r.ReceiveMessages(destination, unlimited, handler)
 }
 
+// Receive receives messages from the default destination.
 func (r *Receiver[T]) Receive(handler func(msg *T)) error {
 	if r.Dest == "" {
 		return fmt.Errorf("no default destination specified")

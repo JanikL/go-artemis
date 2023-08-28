@@ -15,9 +15,13 @@ const (
 	EncodingJson
 )
 
-// Sender sends messages to a specified destination.
+// A Sender sends messages to the artemis broker.
 type Sender struct {
+
+	// Addr is the address of the broker.
 	Addr string
+
+	// Dest is the default destination.
 	Dest string
 
 	// PubSub configures the type of destination.
@@ -30,6 +34,7 @@ type Sender struct {
 	Enc encoding
 }
 
+// SendTo sends messages to a specified destination.
 func (s *Sender) SendTo(destination string, messages ...any) error {
 	conn, err := stomp.Dial("tcp", s.Addr)
 	if err != nil {
@@ -51,6 +56,7 @@ func (s *Sender) SendTo(destination string, messages ...any) error {
 	return nil
 }
 
+// Send sends messages to the default destination.
 func (s *Sender) Send(messages ...any) error {
 	if s.Dest == "" {
 		return fmt.Errorf("no default destination specified")
