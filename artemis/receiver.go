@@ -8,6 +8,7 @@ import (
 	"github.com/go-stomp/stomp/v3"
 )
 
+// unlimited is used to receive an unlimited number of messages.
 const unlimited = 0
 
 // A Receiver receives messages of type T from the artemis broker.
