@@ -8,7 +8,7 @@ import (
 
 const (
 	brokerAddr  = "localhost:61616"
-	destination = "myDest"
+	destination = "myQueue"
 )
 
 func main() {
@@ -36,6 +36,6 @@ func main() {
 		fmt.Println(err)
 	}
 
-	// wait until the messages have been received
+	// wait a second to ensure the messages are received before the program exits
 	time.Sleep(1 * time.Second)
 }

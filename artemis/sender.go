@@ -1,3 +1,6 @@
+// Copyright (c) 2023 Janik Liebrecht
+// Use of this source code is governed by the MIT License that can be found in the LICENSE file.
+
 package artemis
 
 import (
@@ -50,7 +53,7 @@ func (s *Sender) SendTo(destination string, messages ...any) error {
 		err = conn.Send(destination, "text/plain", m,
 			stomp.SendOpt.Header("destination-type", destType))
 		if err != nil {
-			return fmt.Errorf("could not send to queue %s: %v", destination, err)
+			return fmt.Errorf("could not send to destination %s: %v", destination, err)
 		}
 	}
 	return nil
