@@ -44,14 +44,16 @@ func (s *Sender) SendTo(destination string, messages ...any) error {
 		return fmt.Errorf("could not connect to broker %s: %v", s.Addr, err)
 	}
 	defer conn.Disconnect()
+
 	destType := s.destType()
+	contentType := s.contentType()
 	for _, msg := range messages {
 		m, err := encode(msg, s.Enc)
 		if err != nil {
 			return fmt.Errorf("failed to encode message: %v: %v", msg, err)
 		}
-		err = conn.Send(destination, "text/plain", m,
-			stomp.SendOpt.Header("destination-type", destType))
+		opts := stomp.SendOpt.Header("destination-type", destType)
+		err = conn.Send(destination, contentType, m, opts)
 		if err != nil {
 			return fmt.Errorf("could not send to destination %s: %v", destination, err)
 		}
@@ -72,6 +74,17 @@ func (s *Sender) destType() string {
 		return "MULTICAST"
 	} else {
 		return "ANYCAST"
+	}
+}
+
+func (s *Sender) contentType() string {
+	switch s.Enc {
+	case EncodingGob:
+		return "application/octet-stream"
+	case EncodingJson:
+		return "application/json"
+	default:
+		return "application/octet-stream"
 	}
 }
 
